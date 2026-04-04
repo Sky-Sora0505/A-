@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}購入完了 | フレッシュマーケット{% endblock %}
+
+{% block content %}
+<div class="complete-page">
+  <div class="complete-card">
+    <div class="complete-icon">🎉</div>
+    <h2 class="complete-title">購入が完了しました！</h2>
+    <p class="complete-sub">{{ user_name }} 様、ありがとうございます。またのご利用をお待ちしております。</p>
+
+    {% if email_sent %}
+    <div class="email-notice success">
+      📧 <strong>{{ user_email }}</strong> に購入完了メールを送信しました
+    </div>
+    {% else %}
+    <div class="email-notice info">
+      📋 購入内容は以下の通りです（メール設定がないため送信スキップ）
+    </div>
+    {% endif %}
+
+    <div class="receipt">
+      <h3>購入内容</h3>
+      {% for item in cart_items %}
+      <div class="receipt-row">
+        <span>{{ item.emoji }} {{ item.name }}{% if item.qty > 1 %} ×{{ item.qty }}{% endif %}</span>
+        <span>¥{{ (item.price * item.qty) | int }}</span>
+      </div>
+      {% endfor %}
+      <div class="receipt-total">
+        <span>合計</span>
+        <span>¥{{ total | int }}</span>
+      </div>
+    </div>
+
+    <a href="{{ url_for('products') }}" class="btn-primary btn-full">
+      🌿 続けてお買い物する
+    </a>
+  </div>
+</div>
+{% endblock %}

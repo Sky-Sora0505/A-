@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}お会計確認 | フレッシュマーケット{% endblock %}
+
+{% block content %}
+<div class="checkout-page">
+  <div class="checkout-card">
+    <h2 class="checkout-title">🧾 ご注文内容の確認</h2>
+    <p class="checkout-sub">以下の商品を購入しますか？</p>
+
+    <div class="order-list">
+      {% for item in cart_items %}
+      <div class="order-row">
+        <span class="order-emoji">{{ item.emoji }}</span>
+        <span class="order-name">{{ item.name }}</span>
+        {% if item.qty > 1 %}
+        <span class="order-qty">×{{ item.qty }}</span>
+        {% endif %}
+        <span class="order-price">¥{{ (item.price * item.qty) | int }}</span>
+      </div>
+      {% endfor %}
+      <div class="order-total-row">
+        <span>合計金額</span>
+        <span class="order-total-price">¥{{ total | int }}</span>
+      </div>
+    </div>
+
+    <p class="checkout-email-note">
+      📧 購入完了メールを <strong>{{ session.user_email }}</strong> に送信します
+    </p>
+
+    <div class="checkout-actions">
+      <form method="POST" action="{{ url_for('purchase') }}">
+        <button type="submit" class="btn-primary btn-full btn-buy">
+          ✅ はい、購入します
+        </button>
+      </form>
+      <a href="{{ url_for('products') }}" class="btn-secondary btn-full">
+        ← 戻る（買い物を続ける）
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}商品一覧 | フレッシュマーケット{% endblock %}
+
+{% block content %}
+<div class="products-page">
+  <div class="page-header">
+    <h2>今日のお買い物</h2>
+    <p>新鮮な食材をカートへ入れてください</p>
+  </div>
+
+  <div class="products-grid">
+    {% for product in products %}
+    <div class="product-card" id="card-{{ product.id }}">
+      <div class="product-emoji">{{ product.emoji }}</div>
+      <div class="product-name">{{ product.name }}</div>
+      <div class="product-price">¥{{ product.price }}</div>
+      <button
+        class="add-to-cart-btn"
+        onclick="addToCart({{ product.id }}, '{{ product.name }}')"
+        id="btn-{{ product.id }}"
+      >
+        🛒 カートに入れる
+      </button>
+      <div class="in-cart-indicator hidden" id="indicator-{{ product.id }}">
+        ✅ カートに入っています
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if cart %}
+  <div class="cart-float">
+    <a href="{{ url_for('checkout') }}" class="cart-float-btn">
+      🧾 お会計 （{{ cart|length }}点）
+    </a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // 初期カート状態を反映
+  const initialCart = {{ cart | tojson }};
+  initialCart.forEach(pid => {
+    const ind = document.getElementById(`indicator-${pid}`);
+    if (ind) ind.classList.remove('hidden');
+  });
+
+  async function addToCart(productId, productName) {
+    const btn = document.getElementById(`btn-${productId}`);
+    btn.disabled = true;
+    btn.textContent = '追加中...';
+
+    try {
+      const res = await fetch(`/add_to_cart/${productId}`, { method: 'POST' });
+      const data = await res.json();
+
+      if (data.success) {
+        // バッジ更新
+        document.getElementById('cart-badge').textContent = data.cart_count;
+
+        // インジケーター表示
+        const ind = document.getElementById(`indicator-${productId}`);
+        if (ind) ind.classList.remove('hidden');
+
+        // トースト表示
+        showToast(`🛒 ${productName} をカートに入れました`);
+
+        // フローティングボタン更新
+        updateFloatBtn(data.cart_count);
+      }
+    } catch (e) {
+      showToast('エラーが発生しました', 'error');
+    }
+
+    btn.disabled = false;
+    btn.textContent = '🛒 カートに入れる';
+  }
+
+  function updateFloatBtn(count) {
+    let float = document.querySelector('.cart-float');
+    if (!float) {
+      float = document.createElement('div');
+      float.className = 'cart-float';
+      document.querySelector('.products-page').appendChild(float);
+    }
+    float.innerHTML = `<a href="/checkout" class="cart-float-btn">🧾 お会計 （${count}点）</a>`;
+  }
+
+  function showToast(msg, type = 'success') {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.className = `toast toast-${type}`;
+    toast.classList.remove('hidden');
+    setTimeout(() => toast.classList.add('hidden'), 2500);
+  }
+</script>
+{% endblock %}

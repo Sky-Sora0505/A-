@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}新規登録 | フレッシュマーケット{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+  <div class="auth-card">
+    <div class="auth-logo">🌿</div>
+    <h1 class="auth-title">アカウント作成</h1>
+    <p class="auth-sub">メールアドレスで登録できます</p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash flash-{{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="{{ url_for('register') }}" class="auth-form">
+      <div class="form-group">
+        <label>お名前</label>
+        <input type="text" name="name" placeholder="山田 太郎" required>
+      </div>
+      <div class="form-group">
+        <label>メールアドレス</label>
+        <input type="email" name="email" placeholder="you@example.com" required>
+      </div>
+      <div class="form-group">
+        <label>パスワード</label>
+        <input type="password" name="password" placeholder="6文字以上" minlength="6" required>
+      </div>
+      <button type="submit" class="btn-primary btn-full">登録する</button>
+    </form>
+
+    <p class="auth-switch">
+      すでにアカウントをお持ちの方は
+      <a href="{{ url_for('login') }}">ログイン</a>
+    </p>
+  </div>
+</div>
+{% endblock %}
