@@ -1,10 +1,9 @@
 package jp.co.iterative.bus.frontend.controller;
 
 import java.time.LocalDate;
-import java.time.ZoneId;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -81,8 +80,14 @@ public class ReserveListController {
 		}
 
 		// 【追加】過去の予約は削除不可
-		LocalDate today = LocalDate.now();
-		if (selectedReservation.getRideDate() != null && toLocalDate(selectedReservation.getRideDate()).isBefore(today)) {
+		Calendar cal = Calendar.getInstance();
+		cal.set(Calendar.HOUR_OF_DAY, 0);
+		cal.set(Calendar.MINUTE, 0);
+		cal.set(Calendar.SECOND, 0);
+		cal.set(Calendar.MILLISECOND, 0);
+		Date today = cal.getTime();
+
+		if (selectedReservation.getRideDate() != null && selectedReservation.getRideDate().before(today)) {
 			redirectAttributes.addFlashAttribute("errorMessage", "過去の予約は削除できません。");
 			return "redirect:/reserveList/display";
 		}
@@ -124,7 +129,14 @@ public class ReserveListController {
 					.orElse(null);
 
 			// 【追加】セキュリティチェック：過去の予約は削除不可
-			if (canceledReservation == null || (canceledReservation.getRideDate() != null && toLocalDate(canceledReservation.getRideDate()).isBefore(LocalDate.now()))) {
+			Calendar cal = Calendar.getInstance();
+			cal.set(Calendar.HOUR_OF_DAY, 0);
+			cal.set(Calendar.MINUTE, 0);
+			cal.set(Calendar.SECOND, 0);
+			cal.set(Calendar.MILLISECOND, 0);
+			Date today = cal.getTime();
+
+			if (canceledReservation == null || (canceledReservation.getRideDate() != null && canceledReservation.getRideDate().before(today))) {
 				redirectAttributes.addFlashAttribute("errorMessage", "過去の予約は削除できません。");
 				return "redirect:/reserveList/display";
 			}
@@ -153,10 +165,4 @@ public class ReserveListController {
 		return "reserveList/deleteComplete";
 	}
 
-	// 【追加】日付変換ユーティリティ
-	private LocalDate toLocalDate(Date date) {
-		return date.toInstant()
-			.atZone(ZoneId.systemDefault())
-			.toLocalDate();
-	}
 }
