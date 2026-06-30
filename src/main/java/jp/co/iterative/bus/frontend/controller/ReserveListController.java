@@ -1,5 +1,6 @@
 package jp.co.iterative.bus.frontend.controller;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,7 +37,7 @@ public class ReserveListController {
 	public String list(Model model) {
 		List<MemberReservationCustomized> reservationList = memberCustomMapper.selectReservationByMemberId(MEMBER_ID);
 		model.addAttribute("reservationList", reservationList);
-
+		model.addAttribute("today", LocalDate.now());
 
 		return "reserveList/reserveListDisplay";
 	}
