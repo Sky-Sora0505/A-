@@ -47,19 +47,13 @@ public class ReserveListController {
 	}
 
 	// 1. 予約一覧
-	// 【変更】@RequestMapping("list") → @RequestMapping("display")
 	@RequestMapping("display")
 	public String list(Model model) {
-		// 【変更】MEMBER_ID → getLoginMemberId()
-		List<MemberReservationCustomized> allReservations = memberCustomMapper.selectReservationByMemberId(getLoginMemberId());
-		// 【追加】日付フィルタリング処理
-		LocalDate today = LocalDate.now();
-
-		List<MemberReservationCustomized> filteredReservations = allReservations.stream()
-			.filter(r -> r.getRideDate() != null && !toLocalDate(r.getRideDate()).isBefore(today))
-			.collect(Collectors.toList());
-
-		model.addAttribute("reservationList", filteredReservations);
+		// 【変更】すべての予約を取得（フィルタリングなし）
+		List<MemberReservationCustomized> reservationList = memberCustomMapper.selectReservationByMemberId(getLoginMemberId());
+		// 【追加】今日の日付をJSPに渡す
+		model.addAttribute("reservationList", reservationList);
+		model.addAttribute("today", LocalDate.now());
 
 		return "reserveList/reserveListDisplay";
 	}
@@ -71,27 +65,25 @@ public class ReserveListController {
 		// フォームにIDが入っているかチェック
 		if (reserveDeleteForm.getReservationId() == null) {
 			redirectAttributes.addFlashAttribute("errorMessage", "削除する予約を選択してください。");
-			// 【変更】/reserveList/list → /reserveList/display
 			return "redirect:/reserveList/display";
 		}
 
-		// 【変更】MEMBER_ID → getLoginMemberId()
-		List<MemberReservationCustomized> allReservations = memberCustomMapper.selectReservationByMemberId(getLoginMemberId());
-		// 【追加】日付フィルタリング処理
-		LocalDate today = LocalDate.now();
+		List<MemberReservationCustomized> reservationList = memberCustomMapper.selectReservationByMemberId(getLoginMemberId());
 
-		List<MemberReservationCustomized> filteredReservations = allReservations.stream()
-			.filter(r -> r.getRideDate() != null && !toLocalDate(r.getRideDate()).isBefore(today))
-			.collect(Collectors.toList());
-
-		MemberReservationCustomized selectedReservation = filteredReservations.stream()
+		MemberReservationCustomized selectedReservation = reservationList.stream()
 				.filter(r -> reserveDeleteForm.getReservationId().equals(r.getReservationId()))
 				.findFirst()
 				.orElse(null);
 
 		if (selectedReservation == null) {
 			redirectAttributes.addFlashAttribute("errorMessage", "指定された予約が見つかりません。");
-			// 【変更】/reserveList/list → /reserveList/display
+			return "redirect:/reserveList/display";
+		}
+
+		// 【追加】過去の予約は削除不可
+		LocalDate today = LocalDate.now();
+		if (selectedReservation.getRideDate() != null && toLocalDate(selectedReservation.getRideDate()).isBefore(today)) {
+			redirectAttributes.addFlashAttribute("errorMessage", "過去の予約は削除できません。");
 			return "redirect:/reserveList/display";
 		}
 
@@ -121,28 +113,19 @@ public class ReserveListController {
 			// 既に削除されているか確認
 			if (reservationMapper.selectByPrimaryKey(reservationId) == null) {
 			    redirectAttributes.addFlashAttribute("errorMessage", "指定した予約は既に削除されています。");
-			    // 【変更】/reserveList/list → /reserveList/display
 			    return "redirect:/reserveList/display";
 			}
 
 			// 完了画面表示用にデータを退避
-			// 【変更】MEMBER_ID → getLoginMemberId()
 			List<MemberReservationCustomized> allReservations = memberCustomMapper.selectReservationByMemberId(getLoginMemberId());
-			// 【追加】日付フィルタリング処理
-			LocalDate today = LocalDate.now();
-
-			List<MemberReservationCustomized> filteredReservations = allReservations.stream()
-				.filter(r -> r.getRideDate() != null && !toLocalDate(r.getRideDate()).isBefore(today))
-				.collect(Collectors.toList());
-
-			MemberReservationCustomized canceledReservation = filteredReservations.stream()
+			MemberReservationCustomized canceledReservation = allReservations.stream()
 					.filter(r -> r.getReservationId().equals(reservationId))
 					.findFirst()
 					.orElse(null);
 
 			// 【追加】セキュリティチェック：過去の予約は削除不可
-			if (canceledReservation == null) {
-				redirectAttributes.addFlashAttribute("errorMessage", "指定された予約は削除できません。");
+			if (canceledReservation == null || (canceledReservation.getRideDate() != null && toLocalDate(canceledReservation.getRideDate()).isBefore(LocalDate.now()))) {
+				redirectAttributes.addFlashAttribute("errorMessage", "過去の予約は削除できません。");
 				return "redirect:/reserveList/display";
 			}
 

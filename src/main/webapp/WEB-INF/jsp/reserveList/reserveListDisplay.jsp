@@ -47,7 +47,13 @@
 						<c:forEach items="${reservationList}" var="reservation">
 							<tr>
 								<td style="text-align: center;">
-									<input type="radio" name="reservationId" value="${reservation.reservationId}">
+									<!-- 【変更】過去の予約はラジオボタンを表示しない -->
+									<c:if test="${reservation.rideDate >= today}">
+										<input type="radio" name="reservationId" value="${reservation.reservationId}">
+									</c:if>
+									<c:if test="${reservation.rideDate < today}">
+										<span style="color: #999;">-</span>
+									</c:if>
 								</td>
 								<td><fmt:formatDate value="${reservation.rideDate}" pattern="yyyy年 MM月 dd日"/></td>
 								<td>
