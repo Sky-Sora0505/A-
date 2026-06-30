@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
@@ -16,6 +17,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import jp.co.iterative.bus.entity.MemberReservationCustomized;
 import jp.co.iterative.bus.entity.SeatReservationExample;
 import jp.co.iterative.bus.frontend.form.ReserveDeleteForm;
+import jp.co.iterative.bus.frontend.security.MemberDetails;
 import jp.co.iterative.bus.mapper.MemberCustomMapper;
 import jp.co.iterative.bus.mapper.ReservationMapper;
 import jp.co.iterative.bus.mapper.SeatReservationMapper;
@@ -24,7 +26,7 @@ import jp.co.iterative.bus.mapper.SeatReservationMapper;
 @RequestMapping("reserveList")
 public class ReserveListController {
 
-	private static final int MEMBER_ID = 1;
+	// 【削除】private static final int MEMBER_ID = 1;
 
 	@Autowired
 	private MemberCustomMapper memberCustomMapper;
@@ -35,10 +37,22 @@ public class ReserveListController {
 	@Autowired
 	private SeatReservationMapper seatReservationMapper;
 
+	// 【追加】ログイン中の会員IDを取得
+	private Integer getLoginMemberId() {
+		MemberDetails memberDetails = (MemberDetails) SecurityContextHolder
+				.getContext()
+				.getAuthentication()
+				.getPrincipal();
+		return memberDetails.getMember().getId();
+	}
+
 	// 1. 予約一覧
-	@RequestMapping("list")
+	// 【変更】@RequestMapping("list") → @RequestMapping("display")
+	@RequestMapping("display")
 	public String list(Model model) {
-		List<MemberReservationCustomized> allReservations = memberCustomMapper.selectReservationByMemberId(MEMBER_ID);
+		// 【変更】MEMBER_ID → getLoginMemberId()
+		List<MemberReservationCustomized> allReservations = memberCustomMapper.selectReservationByMemberId(getLoginMemberId());
+		// 【追加】日付フィルタリング処理
 		LocalDate today = LocalDate.now();
 
 		List<MemberReservationCustomized> filteredReservations = allReservations.stream()
@@ -57,10 +71,13 @@ public class ReserveListController {
 		// フォームにIDが入っているかチェック
 		if (reserveDeleteForm.getReservationId() == null) {
 			redirectAttributes.addFlashAttribute("errorMessage", "削除する予約を選択してください。");
-			return "redirect:/reserveList/list";
+			// 【変更】/reserveList/list → /reserveList/display
+			return "redirect:/reserveList/display";
 		}
 
-		List<MemberReservationCustomized> allReservations = memberCustomMapper.selectReservationByMemberId(MEMBER_ID);
+		// 【変更】MEMBER_ID → getLoginMemberId()
+		List<MemberReservationCustomized> allReservations = memberCustomMapper.selectReservationByMemberId(getLoginMemberId());
+		// 【追加】日付フィルタリング処理
 		LocalDate today = LocalDate.now();
 
 		List<MemberReservationCustomized> filteredReservations = allReservations.stream()
@@ -74,7 +91,8 @@ public class ReserveListController {
 
 		if (selectedReservation == null) {
 			redirectAttributes.addFlashAttribute("errorMessage", "指定された予約が見つかりません。");
-			return "redirect:/reserveList/list";
+			// 【変更】/reserveList/list → /reserveList/display
+			return "redirect:/reserveList/display";
 		}
 
 		// 小計の計算
@@ -103,11 +121,14 @@ public class ReserveListController {
 			// 既に削除されているか確認
 			if (reservationMapper.selectByPrimaryKey(reservationId) == null) {
 			    redirectAttributes.addFlashAttribute("errorMessage", "指定した予約は既に削除されています。");
-			    return "redirect:/reserveList/list";
+			    // 【変更】/reserveList/list → /reserveList/display
+			    return "redirect:/reserveList/display";
 			}
 
 			// 完了画面表示用にデータを退避
-			List<MemberReservationCustomized> allReservations = memberCustomMapper.selectReservationByMemberId(MEMBER_ID);
+			// 【変更】MEMBER_ID → getLoginMemberId()
+			List<MemberReservationCustomized> allReservations = memberCustomMapper.selectReservationByMemberId(getLoginMemberId());
+			// 【追加】日付フィルタリング処理
 			LocalDate today = LocalDate.now();
 
 			List<MemberReservationCustomized> filteredReservations = allReservations.stream()
@@ -119,9 +140,10 @@ public class ReserveListController {
 					.findFirst()
 					.orElse(null);
 
+			// 【追加】セキュリティチェック：過去の予約は削除不可
 			if (canceledReservation == null) {
 				redirectAttributes.addFlashAttribute("errorMessage", "指定された予約は削除できません。");
-				return "redirect:/reserveList/list";
+				return "redirect:/reserveList/display";
 			}
 
 			redirectAttributes.addFlashAttribute("canceledReservation", canceledReservation);
@@ -148,6 +170,7 @@ public class ReserveListController {
 		return "reserveList/deleteComplete";
 	}
 
+	// 【追加】日付変換ユーティリティ
 	private LocalDate toLocalDate(Date date) {
 		return date.toInstant()
 			.atZone(ZoneId.systemDefault())
