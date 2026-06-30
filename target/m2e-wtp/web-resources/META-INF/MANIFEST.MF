@@ -1,0 +1,10 @@
+Manifest-Version: 1.0
+Built-By: user
+Build-Jdk: 11.0.9
+Implementation-Title: frontend
+Implementation-Version: 0.0.1-SNAPSHOT
+Implementation-Vendor-Id: jp.co.iterative.bus
+Implementation-URL: https://projects.spring.io/spring-boot/#/spring-boot
+ -starter-parent/root/frontend
+Created-By: Maven Integration for Eclipse
+

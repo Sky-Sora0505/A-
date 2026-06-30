@@ -1,0 +1,127 @@
+package jp.co.iterative.bus.frontend.controller;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import jp.co.iterative.bus.entity.MemberReservationCustomized;
+import jp.co.iterative.bus.entity.SeatReservationExample;
+import jp.co.iterative.bus.frontend.form.ReserveDeleteForm;
+import jp.co.iterative.bus.mapper.MemberCustomMapper;
+import jp.co.iterative.bus.mapper.ReservationMapper;
+import jp.co.iterative.bus.mapper.SeatReservationMapper;
+
+@Controller
+@RequestMapping("reserveList")
+public class ReserveListController {
+
+	private static final int MEMBER_ID = 1;
+
+	@Autowired
+	private MemberCustomMapper memberCustomMapper;
+
+	@Autowired
+	private ReservationMapper reservationMapper;
+
+	@Autowired
+	private SeatReservationMapper seatReservationMapper;
+
+	// 1. 予約一覧
+	@RequestMapping("list")
+	public String list(Model model) {
+		List<MemberReservationCustomized> reservationList = memberCustomMapper.selectReservationByMemberId(MEMBER_ID);
+		model.addAttribute("reservationList", reservationList);
+
+
+		return "reserveList/reserveListDisplay";
+	}
+
+	// 2. 削除確認（Formを使用）
+	@RequestMapping("deleteConfirm")
+	public String deleteConfirm(ReserveDeleteForm reserveDeleteForm, Model model, RedirectAttributes redirectAttributes) {
+
+		// フォームにIDが入っているかチェック
+		if (reserveDeleteForm.getReservationId() == null) {
+			redirectAttributes.addFlashAttribute("errorMessage", "削除する予約を選択してください。");
+			// 修正： reservelList -> reserveList
+			return "redirect:/reserveList/list";
+		}
+
+		List<MemberReservationCustomized> reservationList = memberCustomMapper.selectReservationByMemberId(MEMBER_ID);
+
+		MemberReservationCustomized selectedReservation = reservationList.stream()
+				.filter(r -> reserveDeleteForm.getReservationId().equals(r.getReservationId()))
+				.findFirst()
+				.orElse(null);
+
+		if (selectedReservation == null) {
+			redirectAttributes.addFlashAttribute("errorMessage", "指定された予約が見つかりません。");
+			// 修正： reservelList -> reserveList
+			return "redirect:/reserveList/list";
+		}
+
+		// 小計の計算
+		int totalAmount = 0;
+		if (selectedReservation.getPrice() != null && selectedReservation.getSeatNames() != null) {
+			totalAmount = selectedReservation.getPrice() * selectedReservation.getSeatNames().size();
+		}
+
+		// JSPに渡すデータ（Form自体も画面に渡す）
+		model.addAttribute("reservation", selectedReservation);
+		model.addAttribute("totalAmount", totalAmount);
+		model.addAttribute("reserveDeleteForm", reserveDeleteForm);
+
+
+		return "reserveList/deleteComfirm";
+	}
+
+	// 3. 削除実行（Formを使用）
+	@Transactional
+	@RequestMapping("delete")
+	public String delete(ReserveDeleteForm reserveDeleteForm, RedirectAttributes redirectAttributes) {
+
+		if (reserveDeleteForm.getReservationId() != null) {
+			Integer reservationId = reserveDeleteForm.getReservationId();
+
+			// 既に削除されているか確認
+			if (reservationMapper.selectByPrimaryKey(reservationId) == null) {
+			    redirectAttributes.addFlashAttribute("errorMessage", "指定した予約は既に削除されています。");
+			    return "redirect:/reserveList/list";
+			}
+
+			// 完了画面表示用にデータを退避
+			List<MemberReservationCustomized> allReservations = memberCustomMapper.selectReservationByMemberId(MEMBER_ID);
+			MemberReservationCustomized canceledReservation = allReservations.stream()
+					.filter(r -> r.getReservationId().equals(reservationId))
+					.findFirst()
+					.orElse(null);
+
+			redirectAttributes.addFlashAttribute("canceledReservation", canceledReservation);
+			if (canceledReservation != null && canceledReservation.getPrice() != null && canceledReservation.getSeatNames() != null) {
+				int totalAmount = canceledReservation.getPrice() * canceledReservation.getSeatNames().size();
+				redirectAttributes.addFlashAttribute("totalAmount", totalAmount);
+			}
+
+			// 削除処理
+			SeatReservationExample example = new SeatReservationExample();
+			example.createCriteria().andReservationIdEqualTo(reservationId);
+			seatReservationMapper.deleteByExample(example);
+			reservationMapper.deleteByPrimaryKey(reservationId);
+		}
+
+
+		return "redirect:/reserveList/deleteComplete";
+	}
+
+	// 4. 削除完了
+	@RequestMapping("deleteComplete")
+	public String deleteComplete() {
+
+		return "reserveList/deleteComplete";
+	}
+}
