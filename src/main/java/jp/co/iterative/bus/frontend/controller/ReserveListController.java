@@ -1,7 +1,10 @@
 package jp.co.iterative.bus.frontend.controller;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -35,9 +38,14 @@ public class ReserveListController {
 	// 1. 予約一覧
 	@RequestMapping("list")
 	public String list(Model model) {
-		List<MemberReservationCustomized> reservationList = memberCustomMapper.selectReservationByMemberId(MEMBER_ID);
-		model.addAttribute("reservationList", reservationList);
-		model.addAttribute("today", LocalDate.now());
+		List<MemberReservationCustomized> allReservations = memberCustomMapper.selectReservationByMemberId(MEMBER_ID);
+		LocalDate today = LocalDate.now();
+
+		List<MemberReservationCustomized> filteredReservations = allReservations.stream()
+			.filter(r -> r.getRideDate() != null && !toLocalDate(r.getRideDate()).isBefore(today))
+			.collect(Collectors.toList());
+
+		model.addAttribute("reservationList", filteredReservations);
 
 		return "reserveList/reserveListDisplay";
 	}
@@ -49,20 +57,23 @@ public class ReserveListController {
 		// フォームにIDが入っているかチェック
 		if (reserveDeleteForm.getReservationId() == null) {
 			redirectAttributes.addFlashAttribute("errorMessage", "削除する予約を選択してください。");
-			// 修正： reservelList -> reserveList
 			return "redirect:/reserveList/list";
 		}
 
-		List<MemberReservationCustomized> reservationList = memberCustomMapper.selectReservationByMemberId(MEMBER_ID);
+		List<MemberReservationCustomized> allReservations = memberCustomMapper.selectReservationByMemberId(MEMBER_ID);
+		LocalDate today = LocalDate.now();
 
-		MemberReservationCustomized selectedReservation = reservationList.stream()
+		List<MemberReservationCustomized> filteredReservations = allReservations.stream()
+			.filter(r -> r.getRideDate() != null && !toLocalDate(r.getRideDate()).isBefore(today))
+			.collect(Collectors.toList());
+
+		MemberReservationCustomized selectedReservation = filteredReservations.stream()
 				.filter(r -> reserveDeleteForm.getReservationId().equals(r.getReservationId()))
 				.findFirst()
 				.orElse(null);
 
 		if (selectedReservation == null) {
 			redirectAttributes.addFlashAttribute("errorMessage", "指定された予約が見つかりません。");
-			// 修正： reservelList -> reserveList
 			return "redirect:/reserveList/list";
 		}
 
@@ -97,13 +108,24 @@ public class ReserveListController {
 
 			// 完了画面表示用にデータを退避
 			List<MemberReservationCustomized> allReservations = memberCustomMapper.selectReservationByMemberId(MEMBER_ID);
-			MemberReservationCustomized canceledReservation = allReservations.stream()
+			LocalDate today = LocalDate.now();
+
+			List<MemberReservationCustomized> filteredReservations = allReservations.stream()
+				.filter(r -> r.getRideDate() != null && !toLocalDate(r.getRideDate()).isBefore(today))
+				.collect(Collectors.toList());
+
+			MemberReservationCustomized canceledReservation = filteredReservations.stream()
 					.filter(r -> r.getReservationId().equals(reservationId))
 					.findFirst()
 					.orElse(null);
 
+			if (canceledReservation == null) {
+				redirectAttributes.addFlashAttribute("errorMessage", "指定された予約は削除できません。");
+				return "redirect:/reserveList/list";
+			}
+
 			redirectAttributes.addFlashAttribute("canceledReservation", canceledReservation);
-			if (canceledReservation != null && canceledReservation.getPrice() != null && canceledReservation.getSeatNames() != null) {
+			if (canceledReservation.getPrice() != null && canceledReservation.getSeatNames() != null) {
 				int totalAmount = canceledReservation.getPrice() * canceledReservation.getSeatNames().size();
 				redirectAttributes.addFlashAttribute("totalAmount", totalAmount);
 			}
@@ -124,5 +146,11 @@ public class ReserveListController {
 	public String deleteComplete() {
 
 		return "reserveList/deleteComplete";
+	}
+
+	private LocalDate toLocalDate(Date date) {
+		return date.toInstant()
+			.atZone(ZoneId.systemDefault())
+			.toLocalDate();
 	}
 }

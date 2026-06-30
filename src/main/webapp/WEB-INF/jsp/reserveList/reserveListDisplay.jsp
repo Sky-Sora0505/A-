@@ -45,18 +45,9 @@
 						</tr>
 
 						<c:forEach items="${reservationList}" var="reservation">
-							<c:set var="rideDate" value="${reservation.rideDate}" />
-							<c:set var="canDelete" value="${rideDate >= today}" />
 							<tr>
 								<td style="text-align: center;">
-									<c:choose>
-										<c:when test="${canDelete}">
-											<input type="radio" name="reservationId" value="${reservation.reservationId}">
-										</c:when>
-										<c:otherwise>
-											<span style="color: #999;">-</span>
-										</c:otherwise>
-									</c:choose>
+									<input type="radio" name="reservationId" value="${reservation.reservationId}">
 								</td>
 								<td><fmt:formatDate value="${reservation.rideDate}" pattern="yyyy年 MM月 dd日"/></td>
 								<td>
