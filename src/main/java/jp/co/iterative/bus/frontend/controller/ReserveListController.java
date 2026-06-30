@@ -51,9 +51,9 @@ public class ReserveListController {
 	public String list(Model model) {
 		// 【変更】すべての予約を取得（フィルタリングなし）
 		List<MemberReservationCustomized> reservationList = memberCustomMapper.selectReservationByMemberId(getLoginMemberId());
-		// 【追加】今日の日付をJSPに渡す
+		// 【追加】今日の日付をJSPに渡す（java.sql.Date型で型を統一）
 		model.addAttribute("reservationList", reservationList);
-		model.addAttribute("today", LocalDate.now());
+		model.addAttribute("today", java.sql.Date.valueOf(LocalDate.now()));
 
 		return "reserveList/reserveListDisplay";
 	}
